@@ -1,0 +1,6 @@
+﻿Flask
+dnspython
+dkimpy
+cryptography
+pytest
+pandas

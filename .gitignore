@@ -1,0 +1,22 @@
+﻿# Python environment
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Secrets and private keys
+.env
+.env.*
+keys/
+*.pem
+*.key
+*.priv
+
+# Editor and system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
