@@ -1,4 +1,4 @@
-import os
+﻿import os
 import base64
 import dkim
 
@@ -11,7 +11,32 @@ PRIVATE_KEY = os.path.join(KEY_DIR, "private.pem")
 PUBLIC_KEY = os.path.join(KEY_DIR, "public.pem")
 
 
+def _get_private_key_bytes():
+    encoded_key = os.getenv("DKIM_PRIVATE_KEY_B64")
+
+    if encoded_key:
+        try:
+            private_bytes = base64.b64decode(encoded_key, validate=True)
+            serialization.load_pem_private_key(
+                private_bytes,
+                password=None
+            )
+            return private_bytes
+        except Exception as error:
+            raise ValueError("Invalid DKIM private key configuration.") from error
+
+    if not os.path.exists(PRIVATE_KEY):
+        raise FileNotFoundError("Generate DKIM keys first.")
+
+    with open(PRIVATE_KEY, "rb") as file:
+        return file.read()
+
+
 def generate_keys():
+    if os.getenv("DKIM_PRIVATE_KEY_B64"):
+        _get_private_key_bytes()
+        return "Configured DKIM key loaded successfully."
+
     os.makedirs(KEY_DIR, exist_ok=True)
 
     private_key = rsa.generate_private_key(
@@ -40,11 +65,7 @@ def generate_keys():
 
 
 def sign_email(email_bytes, domain, selector):
-    if not os.path.exists(PRIVATE_KEY):
-        raise FileNotFoundError("Generate DKIM keys first.")
-
-    with open(PRIVATE_KEY, "rb") as file:
-        private_key = file.read()
+    private_key = _get_private_key_bytes()
 
     signature = dkim.sign(
         email_bytes,
@@ -58,14 +79,15 @@ def sign_email(email_bytes, domain, selector):
 
 
 def local_dns_lookup(name, timeout=5):
-    if not os.path.exists(PRIVATE_KEY):
+    try:
+        private_bytes = _get_private_key_bytes()
+    except FileNotFoundError:
         return None
 
-    with open(PRIVATE_KEY, "rb") as file:
-        private_key = serialization.load_pem_private_key(
-            file.read(),
-            password=None
-        )
+    private_key = serialization.load_pem_private_key(
+        private_bytes,
+        password=None
+    )
 
     public_der = private_key.public_key().public_bytes(
         encoding=serialization.Encoding.DER,
